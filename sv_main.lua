@@ -5,7 +5,7 @@ AddEventHandler('erp_mdt:AddLog', function(text)
 end)
 
 local function GetNameFromId(cid, cb)
-	cb(exports.oxmysql:executeSync('SELECT firstname, lastname FROM `users` WHERE id = :id LIMIT 1', { id = cid }))
+	cb(exports.oxmysql:executeSync('SELECT firstname, lastname FROM `users` WHERE identifier = :id LIMIT 1', { id = cid }))
 end
 
 RegisterCommand("mdt", function(source, args, rawCommand)
@@ -250,7 +250,7 @@ local function GetConvictions(cid, cb)
 end
 
 local function GetLicenseInfo(cid, cb)
-	cb(exports.oxmysql:executeSync('SELECT * FROM `licenses` WHERE `cid`=:cid', { cid = cid }))
+	cb(exports.oxmysql:executeSync('SELECT * FROM `licenses` WHERE `owner`=:cid', { cid = cid }))
 end
 
 RegisterNetEvent('erp_mdt:searchProfile')
@@ -264,7 +264,7 @@ AddEventHandler('erp_mdt:searchProfile', function(sentData)
 		TriggerEvent('echorp:getplayerfromid', source, function(result)
 			if result then
 				if result.job and (result.job.isPolice or result.job.name == 'doj') then
-					exports.oxmysql:execute("SELECT id, firstname, lastname, gender, profilepic FROM `users` WHERE LOWER(`firstname`) LIKE :query OR LOWER(`lastname`) LIKE :query OR LOWER(`id`) LIKE :query OR CONCAT(LOWER(`firstname`), ' ', LOWER(`lastname`)) LIKE :query LIMIT 20", {
+					exports.oxmysql:execute("SELECT identifier, firstname, lastname, gender, profilepic FROM `users` WHERE LOWER(`firstname`) LIKE :query OR LOWER(`lastname`) LIKE :query OR LOWER(`identifier`) LIKE :query OR CONCAT(LOWER(`firstname`), ' ', LOWER(`lastname`)) LIKE :query LIMIT 20", {
 						query = string.lower('%'..sentData..'%')
 					}, function(people)
 						for i=1, #people do
@@ -322,7 +322,7 @@ AddEventHandler('erp_mdt:searchProfile', function(sentData)
 						TriggerClientEvent('erp_mdt:searchProfile', result.source, people)
 					end)
 				elseif result.job and (result.job.name == 'ambulance') then
-					exports.oxmysql:execute("SELECT id, firstname, lastname, gender, profilepic, dateofbirth FROM `users` WHERE LOWER(`firstname`) LIKE :query OR LOWER(`lastname`) LIKE :query OR LOWER(`id`) LIKE :query OR CONCAT(LOWER(`firstname`), ' ', LOWER(`lastname`)) LIKE :query LIMIT 20", {
+					exports.oxmysql:execute("SELECT identifier, firstname, lastname, gender, profilepic, dateofbirth FROM `users` WHERE LOWER(`firstname`) LIKE :query OR LOWER(`lastname`) LIKE :query OR LOWER(`identifier`) LIKE :query OR CONCAT(LOWER(`firstname`), ' ', LOWER(`lastname`)) LIKE :query LIMIT 20", {
 						query = string.lower('%'..sentData..'%')
 					}, function(people)
 						for i=1, #people do
@@ -477,7 +477,7 @@ local function GetPersonInformation(cid, table, cb)
 end
 
 local function GetVehicleInformation(cid, cb)
-	cb(exports.oxmysql:executeSync('SELECT id, plate, vehicle FROM owned_vehicles WHERE owner=:cid', { cid = cid }))
+	cb(exports.oxmysql:executeSync('SELECT owner, plate, vehicle FROM owned_vehicles WHERE owner=:cid', { cid = cid }))
 end
 
 RegisterNetEvent('erp_mdt:getProfileData')
@@ -486,7 +486,7 @@ AddEventHandler('erp_mdt:getProfileData', function(sentId)
 	TriggerEvent('echorp:getplayerfromid', source, function(result)
 		if result then
 			if result.job and (result.job.isPolice or result.job.name == 'doj') then
-				exports.oxmysql:execute('SELECT id, firstname, lastname, job, profilepic, gender, dateofbirth FROM users WHERE id=:id LIMIT 1', { id = sentId }, function(user)
+				exports.oxmysql:execute('SELECT identifier, firstname, lastname, job, profilepic, gender, dateofbirth FROM users WHERE identifier=:id LIMIT 1', { id = sentId }, function(user)
 					if user and user[1] then
 
 						local function PpPpPpic(gender, profilepic)
@@ -596,7 +596,7 @@ AddEventHandler('erp_mdt:getProfileData', function(sentId)
 					end
 				end)
 			elseif result.job and (result.job.name == 'ambulance') then
-				exports.oxmysql:execute('SELECT id, firstname, lastname, job, profilepic, gender, dateofbirth FROM users WHERE id=:id LIMIT 1', { id = sentId }, function(user)
+				exports.oxmysql:execute('SELECT identifier, firstname, lastname, job, profilepic, gender, dateofbirth FROM users WHERE identifier=:id LIMIT 1', { id = sentId }, function(user)
 					if user and user[1] then
 
 						local function PpPpPpic(gender, profilepic)
@@ -672,11 +672,11 @@ AddEventHandler('erp_mdt:saveProfile', function(pfp, information, cid, fName, sN
 			if result.job and (result.job.isPolice or result.job.name == 'doj') then
 				local function UpdateInfo(id, pfp, desc)
 					exports.oxmysql:executeSync("UPDATE policemdtdata SET `information`=:information WHERE `id`=:id LIMIT 1", { id = id, information = information })
-					exports.oxmysql:executeSync("UPDATE users SET `profilepic`=:profilepic WHERE `id`=:id LIMIT 1", { id = cid, profilepic = pfp })
+					exports.oxmysql:executeSync("UPDATE users SET `profilepic`=:profilepic WHERE `identifier`=:id LIMIT 1", { id = cid, profilepic = pfp })
 					TriggerEvent('erp_mdt:AddLog', "A user with the Citizen ID "..cid.." was updated by "..result.fullname)
 
 					if result.job.name == 'doj' then
-						exports.oxmysql:executeSync("UPDATE users SET `firstname`=:firstname, `lastname`=:lastname WHERE `id`=:id LIMIT 1", { firstname = fName, lastname = sName, id = cid })
+						exports.oxmysql:executeSync("UPDATE users SET `firstname`=:firstname, `lastname`=:lastname WHERE `identifier`=:id LIMIT 1", { firstname = fName, lastname = sName, id = cid })
 					end
 				end
 
@@ -692,7 +692,7 @@ AddEventHandler('erp_mdt:saveProfile', function(pfp, information, cid, fName, sN
 			elseif result.job and (result.job.name == 'ambulance') then
 				local function UpdateInfo(id, pfp, desc)
 					exports.oxmysql:executeSync("UPDATE emsmdtdata SET `information`=:information WHERE `id`=:id LIMIT 1", { id = id, information = information })
-					exports.oxmysql:executeSync("UPDATE users SET `profilepic`=:profilepic WHERE `id`=:id LIMIT 1", { id = cid, profilepic = pfp })
+					exports.oxmysql:executeSync("UPDATE users SET `profilepic`=:profilepic WHERE `identifier`=:id LIMIT 1", { id = cid, profilepic = pfp })
 					TriggerEvent('erp_mdt:AddLog', "A user with the Citizen ID "..cid.." was updated by "..result.fullname)
 				end
 
@@ -1234,7 +1234,7 @@ AddEventHandler('erp_mdt:incidentSearchPerson', function(name)
                         return "img/male.png"
                     end
 
-                    exports.oxmysql:execute("SELECT id, firstname, lastname, profilepic, gender FROM `users` WHERE LOWER(`firstname`) LIKE :query OR LOWER(`lastname`) LIKE :query OR LOWER(`id`) LIKE :query OR CONCAT(LOWER(`firstname`), ' ', LOWER(`lastname`)) LIKE :query LIMIT 30", {
+                    exports.oxmysql:execute("SELECT identifier, firstname, lastname, profilepic, gender FROM `users` WHERE LOWER(`firstname`) LIKE :query OR LOWER(`lastname`) LIKE :query OR LOWER(`identifier`) LIKE :query OR CONCAT(LOWER(`firstname`), ' ', LOWER(`lastname`)) LIKE :query LIMIT 30", {
                         query = string.lower('%'..name..'%') -- % wildcard, needed to search for all alike results
                     }, function(data)
                         for i=1, #data do
@@ -1498,7 +1498,7 @@ local function GetBoloStatus(plate, cb)
 end
 
 local function GetOwnerName(cid, cb)
-	cb(exports.oxmysql:executeSync('SELECT firstname, lastname FROM `users` WHERE id=:cid LIMIT 1', { cid = cid}))
+	cb(exports.oxmysql:executeSync('SELECT firstname, lastname FROM `users` WHERE identifier=:cid LIMIT 1', { cid = cid}))
 end
 
 local function GetVehicleInformation(plate, cb)
