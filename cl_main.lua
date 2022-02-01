@@ -1,62 +1,90 @@
 local isOpen = false
 local callSign = ""
-local PlayerData = {}
+--local PlayerData = {}
 
-RegisterNetEvent('echorp:playerSpawned') -- Use this to grab player info on spawn.
-AddEventHandler('echorp:playerSpawned', function(sentData) PlayerData = sentData end)
+ESX = nil
 
-RegisterNetEvent('echorp:updateinfo')
-AddEventHandler('echorp:updateinfo', function(toChange, targetData) 
-    PlayerData[toChange] = targetData
+Citizen.CreateThread(function()
+    while ESX == nil do
+        TriggerEvent('esx:getSharedObject', function(obj) ESX = obj end)
+        Citizen.Wait(0)
+    end
 end)
 
-RegisterNetEvent('echorp:doLogout') -- Use this to logout.
-AddEventHandler('echorp:doLogout', function(sentData) 
-    PlayerData = {} 
-end)
+-- RegisterNetEvent('echorp:playerSpawned') -- Use this to grab player info on spawn.
+-- AddEventHandler('echorp:playerSpawned', function(sentData)
+--     PlayerData = sentData
+-- end)
+
+-- RegisterNetEvent('echorp:updateinfo')
+-- AddEventHandler('echorp:updateinfo', function(toChange, targetData)
+--     PlayerData[toChange] = targetData
+-- end)
+
+-- RegisterNetEvent('echorp:doLogout') -- Use this to logout.
+-- AddEventHandler('echorp:doLogout', function(sentData)
+--     PlayerData = {}
+-- end)
 
 function EnableGUI(enable)
     print("MDT Enable GUI", enable)
-    if enable then TriggerServerEvent('erp_mdt:opendashboard') end
+    if enable then
+        TriggerServerEvent('erp_mdt:opendashboard')
+    end
     SetNuiFocus(enable, enable)
-    SendNUIMessage({ type = "show", enable = enable, job = PlayerData['job']['name'] })
+    SendNUIMessage({
+        type = "show",
+        enable = enable,
+        job = ESX.GetPlayerData().job.name
+    })
     isOpen = enable
     TriggerEvent('erp_mdt:animation')
 end
 
 function RefreshGUI()
     SetNuiFocus(false, false)
-    SendNUIMessage({ type = "show", enable = false, job = PlayerData['job']['name'] })
+    SendNUIMessage({
+        type = "show",
+        enable = false,
+        job = ESX.GetPlayerData().job.name
+    })
     isOpen = false
 end
 
 RegisterCommand("restartmdt", function(source, args, rawCommand)
-	RefreshGUI()
+    RefreshGUI()
 end, false)
 
 local tablet = 0
 local tabletDict = "amb@code_human_in_bus_passenger_idles@female@tablet@base"
 local tabletAnim = "base"
-local tabletProp = `prop_cs_tablet`
+local tabletProp = prop_cs_tablet
 local tabletBone = 60309
 local tabletOffset = vector3(0.03, 0.002, -0.0)
 local tabletRot = vector3(10.0, 160.0, 0.0)
 
 AddEventHandler('erp_mdt:animation', function()
-    if not isOpen then return end;
+    if not isOpen then
+        return
+    end
     -- Animation
     RequestAnimDict(tabletDict)
-    while not HasAnimDictLoaded(tabletDict) do Citizen.Wait(100) end
+    while not HasAnimDictLoaded(tabletDict) do
+        Citizen.Wait(100)
+    end
     -- Model
     RequestModel(tabletProp)
-    while not HasModelLoaded(tabletProp) do Citizen.Wait(100) end
+    while not HasModelLoaded(tabletProp) do
+        Citizen.Wait(100)
+    end
 
     local plyPed = PlayerPedId()
     local tabletObj = CreateObject(tabletProp, 0.0, 0.0, 0.0, true, true, false)
     local tabletBoneIndex = GetPedBoneIndex(plyPed, tabletBone)
 
     TriggerEvent('actionbar:setEmptyHanded')
-    AttachEntityToEntity(tabletObj, plyPed, tabletBoneIndex, tabletOffset.x, tabletOffset.y, tabletOffset.z, tabletRot.x, tabletRot.y, tabletRot.z, true, false, false, false, 2, true)
+    AttachEntityToEntity(tabletObj, plyPed, tabletBoneIndex, tabletOffset.x, tabletOffset.y, tabletOffset.z,
+        tabletRot.x, tabletRot.y, tabletRot.z, true, false, false, false, 2, true)
     SetModelAsNoLongerNeeded(tabletProp)
 
     CreateThread(function()
@@ -83,22 +111,34 @@ end
 
 RegisterNetEvent('erp_mdt:dashboardbulletin')
 AddEventHandler('erp_mdt:dashboardbulletin', function(sentData)
-    SendNUIMessage({ type = "bulletin", data = sentData })
+    SendNUIMessage({
+        type = "bulletin",
+        data = sentData
+    })
 end)
 
 RegisterNetEvent('erp_mdt:dashboardWarrants')
 AddEventHandler('erp_mdt:dashboardWarrants', function(sentData)
-    SendNUIMessage({ type = "warrants", data = sentData })
+    SendNUIMessage({
+        type = "warrants",
+        data = sentData
+    })
 end)
 
 RegisterNetEvent('erp_mdt:dashboardReports')
 AddEventHandler('erp_mdt:dashboardReports', function(sentData)
-    SendNUIMessage({ type = "reports", data = sentData })
+    SendNUIMessage({
+        type = "reports",
+        data = sentData
+    })
 end)
 
 RegisterNetEvent('erp_mdt:dashboardCalls')
 AddEventHandler('erp_mdt:dashboardCalls', function(sentData)
-    SendNUIMessage({ type = "calls", data = sentData })
+    SendNUIMessage({
+        type = "calls",
+        data = sentData
+    })
 end)
 
 RegisterNUICallback("deleteBulletin", function(data, cb)
@@ -117,26 +157,43 @@ end)
 
 RegisterNetEvent('erp_mdt:newBulletin')
 AddEventHandler('erp_mdt:newBulletin', function(ignoreId, sentData, job)
-    if ignoreId == GetPlayerServerId(PlayerId()) then return end;
-    if job == 'police' and PlayerData['job']['isPolice'] then
-        SendNUIMessage({ type = "newBulletin", data = sentData })
-    elseif job == PlayerData['job']['name'] then
-        SendNUIMessage({ type = "newBulletin", data = sentData })
+    if ignoreId == GetPlayerServerId(PlayerId()) then
+        return
+    end
+    if job == 'police' and ESX.GetPlayerData().job.name == 'police' then
+        SendNUIMessage({
+            type = "newBulletin",
+            data = sentData
+        })
+    elseif job == ESX.GetPlayerData().job.name then
+        SendNUIMessage({
+            type = "newBulletin",
+            data = sentData
+        })
     end
 end)
 
 RegisterNetEvent('erp_mdt:deleteBulletin')
 AddEventHandler('erp_mdt:deleteBulletin', function(ignoreId, sentData, job)
-    if ignoreId == GetPlayerServerId(PlayerId()) then return end;
-    if job == 'police' and PlayerData['job']['isPolice'] then
-        SendNUIMessage({ type = "deleteBulletin", data = sentData })
-    elseif job == PlayerData['job']['name'] then
-        SendNUIMessage({ type = "deleteBulletin", data = sentData })
+    if ignoreId == GetPlayerServerId(PlayerId()) then
+        return
+    end
+    if job == 'police' and ESX.GetPlayerData().job.name == 'police' then
+        SendNUIMessage({
+            type = "deleteBulletin",
+            data = sentData
+        })
+    elseif job == ESX.GetPlayerData().job.name then
+        SendNUIMessage({
+            type = "deleteBulletin",
+            data = sentData
+        })
     end
 end)
 
 RegisterNetEvent('erp_mdt:open')
 AddEventHandler('erp_mdt:open', function(job, jobLabel, lastname, firstname)
+    print('testopen')
     open = true
     EnableGUI(open)
     local x, y, z = table.unpack(GetEntityCoords(PlayerPedId()))
@@ -148,13 +205,24 @@ AddEventHandler('erp_mdt:open', function(job, jobLabel, lastname, firstname)
     local area = GetLabelText(zone)
     local playerStreetsLocation = area
 
-    if not zone then zone = "UNKNOWN" end;
+    if not zone then
+        zone = "UNKNOWN"
+    end
 
-    if intersectStreetName ~= nil and intersectStreetName ~= "" then playerStreetsLocation = currentStreetName .. ", " .. intersectStreetName .. ", " .. area
-    elseif currentStreetName ~= nil and currentStreetName ~= "" then playerStreetsLocation = currentStreetName .. ", " .. area
-    else playerStreetsLocation = area end
+    if intersectStreetName ~= nil and intersectStreetName ~= "" then
+        playerStreetsLocation = currentStreetName .. ", " .. intersectStreetName .. ", " .. area
+    elseif currentStreetName ~= nil and currentStreetName ~= "" then
+        playerStreetsLocation = currentStreetName .. ", " .. area
+    else
+        playerStreetsLocation = area
+    end
 
-    SendNUIMessage({ type = "data", name = "Welcome, " ..jobLabel..' '..lastname, location = playerStreetsLocation, fullname = firstname..' '..lastname })
+    SendNUIMessage({
+        type = "data",
+        name = "Welcome, " .. jobLabel .. ' ' .. lastname,
+        location = playerStreetsLocation,
+        fullname = firstname .. ' ' .. lastname
+    })
 end)
 
 RegisterNUICallback('escape', function(data, cb)
@@ -180,7 +248,11 @@ end)
 
 RegisterNetEvent('erp_mdt:searchProfile')
 AddEventHandler('erp_mdt:searchProfile', function(sentData, isLimited)
-    SendNUIMessage({ type = "profiles", data = sentData, isLimited = isLimited })
+    SendNUIMessage({
+        type = "profiles",
+        data = sentData,
+        isLimited = isLimited
+    })
 end)
 
 RegisterNUICallback("saveProfile", function(data, cb)
@@ -217,18 +289,24 @@ RegisterNetEvent('erp_mdt:getProfileData')
 AddEventHandler('erp_mdt:getProfileData', function(sentData, isLimited)
     if not isLimited then
         local vehicles = sentData['vehicles']
-        for i=1, #vehicles do
+        for i = 1, #vehicles do
             sentData['vehicles'][i]['plate'] = string.upper(sentData['vehicles'][i]['plate'])
             local tempModel = vehicles[i]['model']
             if tempModel and tempModel ~= "Unknown" then
                 local DisplayNameModel = GetDisplayNameFromVehicleModel(tempModel)
                 local LabelText = GetLabelText(DisplayNameModel)
-                if LabelText == "NULL" then LabelText = DisplayNameModel end
+                if LabelText == "NULL" then
+                    LabelText = DisplayNameModel
+                end
                 sentData['vehicles'][i]['model'] = LabelText
             end
         end
     end
-    SendNUIMessage({ type = "profileData", data = sentData, isLimited = isLimited })
+    SendNUIMessage({
+        type = "profileData",
+        data = sentData,
+        isLimited = isLimited
+    })
 end)
 
 RegisterNUICallback("updateLicence", function(data, cb)
@@ -261,7 +339,10 @@ end)
 
 RegisterNetEvent('erp_mdt:getIncidents')
 AddEventHandler('erp_mdt:getIncidents', function(sentData)
-    SendNUIMessage({ type = "incidents", data = sentData })
+    SendNUIMessage({
+        type = "incidents",
+        data = sentData
+    })
 end)
 
 RegisterNUICallback("getIncidentData", function(data, cb)
@@ -272,18 +353,26 @@ end)
 
 RegisterNetEvent('erp_mdt:getIncidentData')
 AddEventHandler('erp_mdt:getIncidentData', function(sentData, sentConvictions)
-    SendNUIMessage({ type = "incidentData", data = sentData, convictions = sentConvictions })
+    
+    SendNUIMessage({
+        type = "incidentData",
+        data = sentData,
+        convictions = sentConvictions
+    })
 end)
 
 RegisterNUICallback("incidentSearchPerson", function(data, cb)
     local name = data.name
-    TriggerServerEvent('erp_mdt:incidentSearchPerson', name )
+    TriggerServerEvent('erp_mdt:incidentSearchPerson', name)
     cb(true)
 end)
 
 RegisterNetEvent('erp_mdt:incidentSearchPerson')
 AddEventHandler('erp_mdt:incidentSearchPerson', function(sentData)
-    SendNUIMessage({ type = "incidentSearchPerson", data = sentData })
+    SendNUIMessage({
+        type = "incidentSearchPerson",
+        data = sentData
+    })
 end)
 
 -- BOlO
@@ -296,7 +385,10 @@ end)
 
 RegisterNetEvent('erp_mdt:getBolos')
 AddEventHandler('erp_mdt:getBolos', function(sentData)
-    SendNUIMessage({ type = "bolos", data = sentData })
+    SendNUIMessage({
+        type = "bolos",
+        data = sentData
+    })
 end)
 
 RegisterNUICallback("getAllBolos", function(data, cb)
@@ -306,7 +398,10 @@ end)
 
 RegisterNetEvent('erp_mdt:getAllIncidents')
 AddEventHandler('erp_mdt:getAllIncidents', function(sentData)
-    SendNUIMessage({ type = "incidents", data = sentData })
+    SendNUIMessage({
+        type = "incidents",
+        data = sentData
+    })
 end)
 
 RegisterNUICallback("getAllIncidents", function(data, cb)
@@ -316,7 +411,10 @@ end)
 
 RegisterNetEvent('erp_mdt:getAllBolos')
 AddEventHandler('erp_mdt:getAllBolos', function(sentData)
-    SendNUIMessage({ type = "bolos", data = sentData })
+    SendNUIMessage({
+        type = "bolos",
+        data = sentData
+    })
 end)
 
 RegisterNUICallback("getBoloData", function(data, cb)
@@ -327,7 +425,10 @@ end)
 
 RegisterNetEvent('erp_mdt:getBoloData')
 AddEventHandler('erp_mdt:getBoloData', function(sentData)
-    SendNUIMessage({ type = "boloData", data = sentData })
+    SendNUIMessage({
+        type = "boloData",
+        data = sentData
+    })
 end)
 
 RegisterNUICallback("newBolo", function(data, cb)
@@ -342,13 +443,17 @@ RegisterNUICallback("newBolo", function(data, cb)
     local gallery = data.gallery
     local officers = data.officers
     local time = data.time
-    TriggerServerEvent('erp_mdt:newBolo', existing, id, title, plate, owner, individual, detail, tags, gallery, officers, time)
+    TriggerServerEvent('erp_mdt:newBolo', existing, id, title, plate, owner, individual, detail, tags, gallery,
+        officers, time)
     cb(true)
 end)
 
 RegisterNetEvent('erp_mdt:boloComplete')
 AddEventHandler('erp_mdt:boloComplete', function(sentData)
-    SendNUIMessage({ type = "boloComplete", data = sentData })
+    SendNUIMessage({
+        type = "boloComplete",
+        data = sentData
+    })
 end)
 
 RegisterNUICallback("deleteBolo", function(data, cb)
@@ -372,7 +477,10 @@ end)
 
 RegisterNetEvent('erp_mdt:getAllReports')
 AddEventHandler('erp_mdt:getAllReports', function(sentData)
-    SendNUIMessage({ type = "reports", data = sentData })
+    SendNUIMessage({
+        type = "reports",
+        data = sentData
+    })
 end)
 
 RegisterNUICallback("getReportData", function(data, cb)
@@ -383,7 +491,10 @@ end)
 
 RegisterNetEvent('erp_mdt:getReportData')
 AddEventHandler('erp_mdt:getReportData', function(sentData)
-    SendNUIMessage({ type = "reportData", data = sentData })
+    SendNUIMessage({
+        type = "reportData",
+        data = sentData
+    })
 end)
 
 RegisterNUICallback("searchReports", function(data, cb)
@@ -403,13 +514,17 @@ RegisterNUICallback("newReport", function(data, cb)
     local officers = data.officers
     local civilians = data.civilians
     local time = data.time
-    TriggerServerEvent('erp_mdt:newReport', existing, id, title, reporttype, detail, tags, gallery, officers, civilians, time)
+    TriggerServerEvent('erp_mdt:newReport', existing, id, title, reporttype, detail, tags, gallery, officers, civilians,
+        time)
     cb(true)
 end)
 
 RegisterNetEvent('erp_mdt:reportComplete')
 AddEventHandler('erp_mdt:reportComplete', function(sentData)
-    SendNUIMessage({ type = "reportComplete", data = sentData })
+    SendNUIMessage({
+        type = "reportComplete",
+        data = sentData
+    })
 end)
 
 -- DMV Page
@@ -579,7 +694,7 @@ local ColorNames = {
     [155] = "Matte Foilage Green",
     [156] = "DEFAULT ALLOY COLOR",
     [157] = "Epsilon Blue",
-    [158] = "Unknown",
+    [158] = "Unknown"
 }
 
 local ColorInformation = {
@@ -741,19 +856,26 @@ local ColorInformation = {
     [155] = "green",
     [156] = "silver",
     [157] = "blue",
-    [158] = "black",
+    [158] = "black"
 }
 
 RegisterNetEvent('erp_mdt:searchVehicles')
 AddEventHandler('erp_mdt:searchVehicles', function(sentData)
-    for i=1, #sentData do
+    for i = 1, #sentData do
         local vehicle = json.decode(sentData[i]['vehicle'])
+		local imgname = string.lower(GetDisplayNameFromVehicleModel(vehicle['model']))
         sentData[i]['plate'] = string.upper(sentData[i]['plate'])
         sentData[i]['color'] = ColorInformation[vehicle['color1']]
         sentData[i]['colorName'] = ColorNames[vehicle['color1']]
         sentData[i]['model'] = GetLabelText(GetDisplayNameFromVehicleModel(vehicle['model']))
+		if sentData[i]['image'] == nil then
+            sentData[i]['image'] = "img/cars/" .. imgname .. ".png"
+        end
     end
-    SendNUIMessage({ type = "searchedVehicles", data = sentData })
+    SendNUIMessage({
+        type = "searchedVehicles",
+        data = sentData
+    })
 end)
 
 RegisterNUICallback("getVehicleData", function(data, cb)
@@ -792,12 +914,19 @@ AddEventHandler('erp_mdt:getVehicleData', function(sentData)
     if sentData and sentData[1] then
         local vehicle = sentData[1]
         local vehData = json.decode(vehicle['vehicle'])
+		local imgname = string.lower(GetDisplayNameFromVehicleModel(vehData['model']))
         vehicle['color'] = ColorInformation[vehData['color1']]
         vehicle['colorName'] = ColorNames[vehData['color1']]
         vehicle['model'] = GetLabelText(GetDisplayNameFromVehicleModel(vehData['model']))
         vehicle['class'] = classlist[GetVehicleClassFromName(vehData['model'])]
         vehicle['vehicle'] = nil
-        SendNUIMessage({ type = "getVehicleData", data = vehicle })
+        if vehicle['image'] == nil then
+            vehicle['image'] = "img/cars/" .. imgname .. ".png"
+        end
+        SendNUIMessage({
+            type = "getVehicleData",
+            data = vehicle
+        })
     end
 end)
 
@@ -812,7 +941,10 @@ end)
 
 RegisterNetEvent('erp_mdt:updateVehicleDbId')
 AddEventHandler('erp_mdt:updateVehicleDbId', function(sentData)
-    SendNUIMessage({ type = "updateVehicleDbId", data = tonumber(sentData) })
+    SendNUIMessage({
+        type = "updateVehicleDbId",
+        data = tonumber(sentData)
+    })
 end)
 
 RegisterNUICallback("knownInformation", function(data, cb)
@@ -831,7 +963,10 @@ end)
 
 RegisterNetEvent('erp_mdt:getAllLogs')
 AddEventHandler('erp_mdt:getAllLogs', function(sentData)
-    SendNUIMessage({ type = "getAllLogs", data = sentData })
+    SendNUIMessage({
+        type = "getAllLogs",
+        data = sentData
+    })
 end)
 
 RegisterNUICallback("getPenalCode", function(data, cb)
@@ -841,12 +976,26 @@ end)
 
 RegisterNetEvent('erp_mdt:getPenalCode')
 AddEventHandler('erp_mdt:getPenalCode', function(titles, penalcode)
-    SendNUIMessage({ type = "getPenalCode", titles = titles, penalcode = penalcode })
+    SendNUIMessage({
+        type = "getPenalCode",
+        titles = titles,
+        penalcode = penalcode
+    })
 end)
 
 RegisterNetEvent('erp_mdt:getActiveUnits')
 AddEventHandler('erp_mdt:getActiveUnits', function(lspd, bcso, sast, sasp, doc, sapr, pa, ems)
-    SendNUIMessage({ type = "getActiveUnits", lspd = lspd, bcso = bcso, sast = sast, doc = doc, sasp = sasp, sapr = sapr, pa = pa, ems = ems })
+    SendNUIMessage({
+        type = "getActiveUnits",
+        lspd = lspd,
+        bcso = bcso,
+        sast = sast,
+        doc = doc,
+        sasp = sasp,
+        sapr = sapr,
+        pa = pa,
+        ems = ems
+    })
 end)
 
 RegisterNUICallback("toggleDuty", function(data, cb)
@@ -866,7 +1015,7 @@ end)
 
 RegisterNetEvent('erp_mdt:setRadio')
 AddEventHandler('erp_mdt:setRadio', function(radio, name)
-    if radio then 
+    if radio then
         -- Replace with your inventory check
         --[[if (not exports["erp-inventory"]:hasEnoughOfItem('radio',1,false)) then
             exports['erp_notifications']:SendAlert('inform', 'Missing radio, '..name..' tried to set your radio frequency.', 7500)
@@ -874,20 +1023,22 @@ AddEventHandler('erp_mdt:setRadio', function(radio, name)
         end]]
         exports["pma-voice"]:setVoiceProperty("radioEnabled", true)
         exports["pma-voice"]:setRadioChannel(tonumber(radio))
-        exports['erp_notifications']:SendAlert('inform', 'Your radio frequency was set to: '.. radio .. ' MHz, by '..name..'', 7500)
+        exports['erp_notifications']:SendAlert('inform', 'Your radio frequency was set to: ' .. radio .. ' MHz, by ' ..
+            name .. '', 7500)
     end
 end)
 
 RegisterNetEvent('erp_mdt:sig100')
 AddEventHandler('erp_mdt:sig100', function(radio, type)
-    local job = PlayerData['job']
-    if (job.isPolice or job.name == 'ambulance') and job.duty == 1 then
+    local job = ESX.GetPlayerData().job
+    if (job.name == 'police' or job.name == 'ambulance') and job.duty == 1 then
         if type == true then
-            exports['erp_notifications']:PersistentAlert("START", "signall100-"..radio, "inform", "Radio "..radio.." is currently signal 100!")
+            exports['erp_notifications']:PersistentAlert("START", "signall100-" .. radio, "inform",
+                "Radio " .. radio .. " is currently signal 100!")
         end
     end
     if not type then
-        exports['erp_notifications']:PersistentAlert("END", "signall100-"..radio)
+        exports['erp_notifications']:PersistentAlert("END", "signall100-" .. radio)
     end
 end)
 
@@ -897,13 +1048,17 @@ AddEventHandler('erp_mdt:updateCallsign', function(callsign)
 end)
 
 RegisterNUICallback("saveIncident", function(data, cb)
-    TriggerServerEvent('erp_mdt:saveIncident', data.ID, data.title, data.information, data.tags, data.officers, data.civilians, data.evidence, data.associated, data.time)
+    TriggerServerEvent('erp_mdt:saveIncident', data.ID, data.title, data.information, data.tags, data.officers,
+        data.civilians, data.evidence, data.associated, data.time)
     cb(true)
 end)
 
 RegisterNetEvent('erp_mdt:updateIncidentDbId')
 AddEventHandler('erp_mdt:updateIncidentDbId', function(sentData)
-    SendNUIMessage({ type = "updateIncidentDbId", data = tonumber(sentData) })
+    SendNUIMessage({
+        type = "updateIncidentDbId",
+        data = tonumber(sentData)
+    })
 end)
 
 RegisterNUICallback("removeIncidentCriminal", function(data, cb)
@@ -930,8 +1085,14 @@ end)
 
 RegisterNetEvent('erp_mdt:callDetach')
 AddEventHandler('erp_mdt:callDetach', function(callid, sentData)
-    local job = PlayerData['job']
-    if job.isPolice or job.name == 'ambulance' then SendNUIMessage({ type = "callDetach", callid = callid, data = tonumber(sentData) }) end
+    local job = ESX.GetPlayerData().job
+    if job.name == 'police' or job.name == 'ambulance' then
+        SendNUIMessage({
+            type = "callDetach",
+            callid = callid,
+            data = tonumber(sentData)
+        })
+    end
 end)
 
 RegisterNUICallback("callAttach", function(data, cb)
@@ -941,15 +1102,22 @@ end)
 
 RegisterNetEvent('erp_mdt:callAttach')
 AddEventHandler('erp_mdt:callAttach', function(callid, sentData)
-    local job = PlayerData['job']
-    if job.isPolice or job.name == 'ambulance' then
-        SendNUIMessage({ type = "callAttach", callid = callid, data = tonumber(sentData) })
+    local job = ESX.GetPlayerData().job
+    if job.name == 'police' or job.name == 'ambulance' then
+        SendNUIMessage({
+            type = "callAttach",
+            callid = callid,
+            data = tonumber(sentData)
+        })
     end
 end)
 
 RegisterNetEvent('dispatch:clNotify')
 AddEventHandler('dispatch:clNotify', function(sNotificationData, sNotificationId)
-    SendNUIMessage({ type = "call", data = sNotificationData })
+    SendNUIMessage({
+        type = "call",
+        data = sNotificationData
+    })
 end)
 
 RegisterNUICallback("attachedUnits", function(data, cb)
@@ -959,7 +1127,11 @@ end)
 
 RegisterNetEvent('erp_mdt:attachedUnits')
 AddEventHandler('erp_mdt:attachedUnits', function(sentData, callid)
-    SendNUIMessage({ type = "attachedUnits", data = sentData, callid = callid })
+    SendNUIMessage({
+        type = "attachedUnits",
+        data = sentData,
+        callid = callid
+    })
 end)
 
 RegisterNUICallback("callDispatchDetach", function(data, cb)
@@ -983,7 +1155,9 @@ RegisterNUICallback("setWaypointU", function(data, cb)
 end)
 
 RegisterNetEvent('erp_mdt:setWaypoint:unit')
-AddEventHandler('erp_mdt:setWaypoint:unit', function(sentData) SetNewWaypoint(sentData.x, sentData.y) end)
+AddEventHandler('erp_mdt:setWaypoint:unit', function(sentData)
+    SetNewWaypoint(sentData.x, sentData.y)
+end)
 
 -- Dispatch
 
@@ -994,15 +1168,21 @@ end)
 
 RegisterNetEvent('erp_mdt:dashboardMessage')
 AddEventHandler('erp_mdt:dashboardMessage', function(sentData)
-    local job = PlayerData['job']
-    if job.isPolice or job.name == 'ambulance' then
-        SendNUIMessage({ type = "dispatchmessage", data = sentData })
+    local job = ESX.GetPlayerData().job
+    if job.name == 'police' or job.name == 'ambulance' then
+        SendNUIMessage({
+            type = "dispatchmessage",
+            data = sentData
+        })
     end
 end)
 
 RegisterNetEvent('erp_mdt:dashboardMessages')
 AddEventHandler('erp_mdt:dashboardMessages', function(sentData)
-    SendNUIMessage({ type = "dispatchmessages", data = sentData })
+    SendNUIMessage({
+        type = "dispatchmessages",
+        data = sentData
+    })
 end)
 
 RegisterNUICallback("refreshDispatchMsgs", function(data, cb)
@@ -1013,13 +1193,29 @@ end)
 RegisterNUICallback("dispatchNotif", function(data, cb)
     local info = data['data']
     local mentioned = false
-    if callSign ~= "" then if string.find(string.lower(info['message']),string.lower(string.gsub(callSign,'-','%%-'))) then mentioned = true end end
+    if callSign ~= "" then
+        if string.find(string.lower(info['message']), string.lower(string.gsub(callSign, '-', '%%-'))) then
+            mentioned = true
+        end
+    end
     if mentioned then
-        TriggerEvent('erp_phone:sendNotification', {img = info['profilepic'], title = "Dispatch (Mention)", content = info['message'], time = 7500, customPic = true })
+        TriggerEvent('erp_phone:sendNotification', {
+            img = info['profilepic'],
+            title = "Dispatch (Mention)",
+            content = info['message'],
+            time = 7500,
+            customPic = true
+        })
         PlaySoundFrontend(-1, "SELECT", "HUD_FRONTEND_DEFAULT_SOUNDSET", false)
         PlaySoundFrontend(-1, "Event_Start_Text", "GTAO_FM_Events_Soundset", 0)
     else
-        TriggerEvent('erp_phone:sendNotification', {img = info['profilepic'], title = "Dispatch ("..info['name']..")", content = info['message'], time = 5000, customPic = true })
+        TriggerEvent('erp_phone:sendNotification', {
+            img = info['profilepic'],
+            title = "Dispatch (" .. info['name'] .. ")",
+            content = info['message'],
+            time = 5000,
+            customPic = true
+        })
     end
     cb(true)
 end)
@@ -1031,7 +1227,11 @@ end)
 
 RegisterNetEvent('erp_mdt:getCallResponses')
 AddEventHandler('erp_mdt:getCallResponses', function(sentData, sentCallId)
-    SendNUIMessage({ type = "getCallResponses", data = sentData, callid = sentCallId })
+    SendNUIMessage({
+        type = "getCallResponses",
+        data = sentData,
+        callid = sentCallId
+    })
 end)
 
 RegisterNUICallback("sendCallResponse", function(data, cb)
@@ -1041,23 +1241,29 @@ end)
 
 RegisterNetEvent('erp_mdt:sendCallResponse')
 AddEventHandler('erp_mdt:sendCallResponse', function(message, time, callid, name)
-    SendNUIMessage({ type = "sendCallResponse", message = message, time = time, callid = callid, name = name })
+    SendNUIMessage({
+        type = "sendCallResponse",
+        message = message,
+        time = time,
+        callid = callid,
+        name = name
+    })
 end)
 
-function tprint (t, s)
+function tprint(t, s)
     for k, v in pairs(t) do
-        local kfmt = '["' .. tostring(k) ..'"]'
+        local kfmt = '["' .. tostring(k) .. '"]'
         if type(k) ~= 'string' then
             kfmt = '[' .. k .. ']'
         end
-        local vfmt = '"'.. tostring(v) ..'"'
+        local vfmt = '"' .. tostring(v) .. '"'
         if type(v) == 'table' then
-            tprint(v, (s or '')..kfmt)
+            tprint(v, (s or '') .. kfmt)
         else
             if type(v) ~= 'string' then
                 vfmt = tostring(v)
             end
-            print(type(t)..(s or '')..kfmt..' = '..vfmt)
+            print(type(t) .. (s or '') .. kfmt .. ' = ' .. vfmt)
         end
     end
 end
@@ -1067,7 +1273,7 @@ RegisterNUICallback("impoundVehicle", function(data, cb)
     local plate = string.upper(string.gsub(data['plate'], "^%s*(.-)%s*$", "%1"))
     local vehicles = GetGamePool('CVehicle')
 
-    for k,v in pairs(vehicles) do
+    for k, v in pairs(vehicles) do
         local plt = string.upper(string.gsub(GetVehicleNumberPlateText(v), "^%s*(.-)%s*$", "%1"))
         if plt == plate then
             local dist = #(GetEntityCoords(PlayerPedId()) - GetEntityCoords(v))
@@ -1083,7 +1289,9 @@ RegisterNUICallback("impoundVehicle", function(data, cb)
         return
     end
 
-    SendNUIMessage({ type = "greenShit" })
+    SendNUIMessage({
+        type = "greenShit"
+    })
     TriggerServerEvent('erp_mdt:impoundVehicle', data, found)
     cb('okbb')
 end)
@@ -1097,16 +1305,20 @@ AddEventHandler('erp_mdt:notifyMechanics', function(sentData)
 end)
 
 RegisterNUICallback("removeImpound", function(data, cb)
-	TriggerServerEvent('erp_mdt:removeImpound', data['plate'])
-	cb('ok')
+    TriggerServerEvent('erp_mdt:removeImpound', data['plate'])
+    cb('ok')
 end)
 
 RegisterNUICallback("statusImpound", function(data, cb)
-	TriggerServerEvent('erp_mdt:statusImpound', data['plate'])
-	cb('ok')
+    TriggerServerEvent('erp_mdt:statusImpound', data['plate'])
+    cb('ok')
 end)
 
 RegisterNetEvent('erp_mdt:statusImpound')
 AddEventHandler('erp_mdt:statusImpound', function(data, plate)
-    SendNUIMessage({ type = "statusImpound", data = data, plate = plate })
+    SendNUIMessage({
+        type = "statusImpound",
+        data = data,
+        plate = plate
+    })
 end)

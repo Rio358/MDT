@@ -22,6 +22,7 @@ files {
     'ui/img/not-found.jpg',
     'ui/img/male.png',
     'ui/img/female.png',
+	'ui/img/cars/*.png',
     'ui/dashboard.html',
     'ui/dmv.html',
     'ui/bolos.html',
