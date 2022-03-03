@@ -1,6 +1,6 @@
 local isOpen = false
 local callSign = ""
---local PlayerData = {}
+local PlayerData = {}
 
 ESX = nil
 
@@ -9,22 +9,23 @@ Citizen.CreateThread(function()
         TriggerEvent('esx:getSharedObject', function(obj) ESX = obj end)
         Citizen.Wait(0)
     end
+    ESX.GetPlayerData()
 end)
 
--- RegisterNetEvent('echorp:playerSpawned') -- Use this to grab player info on spawn.
--- AddEventHandler('echorp:playerSpawned', function(sentData)
---     PlayerData = sentData
--- end)
+RegisterNetEvent('esx:playerSpawned') -- Use this to grab player info on spawn.
+AddEventHandler('esx:playerSpawned', function(sentData)
+    PlayerData = sentData
+end)
 
--- RegisterNetEvent('echorp:updateinfo')
--- AddEventHandler('echorp:updateinfo', function(toChange, targetData)
---     PlayerData[toChange] = targetData
--- end)
+RegisterNetEvent('esx:setJob')
+AddEventHandler('esx:setJob', function(toChange, targetData)
+    PlayerData[toChange] = targetData
+end)
 
--- RegisterNetEvent('echorp:doLogout') -- Use this to logout.
--- AddEventHandler('echorp:doLogout', function(sentData)
---     PlayerData = {}
--- end)
+RegisterNetEvent('esx:onPlayerLogout') -- Use this to logout.
+AddEventHandler('esx:onPlayerLogout', function(sentData)
+    PlayerData = {}
+end)
 
 function EnableGUI(enable)
     print("MDT Enable GUI", enable)
@@ -1017,14 +1018,14 @@ RegisterNetEvent('erp_mdt:setRadio')
 AddEventHandler('erp_mdt:setRadio', function(radio, name)
     if radio then
         -- Replace with your inventory check
-        --[[if (not exports["erp-inventory"]:hasEnoughOfItem('radio',1,false)) then
-            exports['erp_notifications']:SendAlert('inform', 'Missing radio, '..name..' tried to set your radio frequency.', 7500)
-            return
-        end]]
+        -- Initial Set for Ox Inventory
+        -- if (not exports.ox_inventory:Search(2,'radio')) then
+        --     exports['mythic_notify']:SendAlert('inform', 'Missing radio, '..name..' tried to set your radio frequency.', 7500)
+        --     return
+        -- end
         exports["pma-voice"]:setVoiceProperty("radioEnabled", true)
         exports["pma-voice"]:setRadioChannel(tonumber(radio))
-        exports['erp_notifications']:SendAlert('inform', 'Your radio frequency was set to: ' .. radio .. ' MHz, by ' ..
-            name .. '', 7500)
+        exports['mythic_notify']:SendAlert('inform', 'Your radio frequency was set to: ' .. radio .. ' MHz, by ' ..name .. '', 7500)
     end
 end)
 
@@ -1033,12 +1034,11 @@ AddEventHandler('erp_mdt:sig100', function(radio, type)
     local job = ESX.GetPlayerData().job
     if (job.name == 'police' or job.name == 'ambulance') and job.duty == 1 then
         if type == true then
-            exports['erp_notifications']:PersistentAlert("START", "signall100-" .. radio, "inform",
-                "Radio " .. radio .. " is currently signal 100!")
+            exports['mythic_notify']:PersistentAlert("START", "signall100-" .. radio, "inform","Radio " .. radio .. " is currently signal 100!")
         end
     end
     if not type then
-        exports['erp_notifications']:PersistentAlert("END", "signall100-" .. radio)
+        exports['mythic_notify']:PersistentAlert("END", "signall100-" .. radio)
     end
 end)
 
@@ -1190,6 +1190,7 @@ RegisterNUICallback("refreshDispatchMsgs", function(data, cb)
     cb(true)
 end)
 
+-- Reuse mythic notify to handle generic info
 RegisterNUICallback("dispatchNotif", function(data, cb)
     local info = data['data']
     local mentioned = false
@@ -1199,23 +1200,11 @@ RegisterNUICallback("dispatchNotif", function(data, cb)
         end
     end
     if mentioned then
-        TriggerEvent('erp_phone:sendNotification', {
-            img = info['profilepic'],
-            title = "Dispatch (Mention)",
-            content = info['message'],
-            time = 7500,
-            customPic = true
-        })
+        TriggerEvent('mythic_notify:client:SendAlert', {type = 'inform',text = "[Dispatch inform]"..info['message'],duration = 7500})
         PlaySoundFrontend(-1, "SELECT", "HUD_FRONTEND_DEFAULT_SOUNDSET", false)
         PlaySoundFrontend(-1, "Event_Start_Text", "GTAO_FM_Events_Soundset", 0)
     else
-        TriggerEvent('erp_phone:sendNotification', {
-            img = info['profilepic'],
-            title = "Dispatch (" .. info['name'] .. ")",
-            content = info['message'],
-            time = 5000,
-            customPic = true
-        })
+        TriggerEvent('mythic_notify:client:SendAlert', {type = 'inform',text = "[Dispatch inform]"..info['message'],duration = 7500})
     end
     cb(true)
 end)

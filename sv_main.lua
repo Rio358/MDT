@@ -61,8 +61,9 @@ AddEventHandler('erp_mdt:open', function(source)
     end
 end)
 
-RegisterNetEvent('echorp:playerSpawned')
-AddEventHandler('echorp:playerSpawned', function(PlayerData)
+RegisterNetEvent('esx:onPlayerJoined')
+AddEventHandler('esx:onPlayerJoined', function(PlayerData)
+    local xPlayer = ESX.GetPlayerFromId(source)
     local cid = PlayerData['cid']
     if cid then
         local callsign = GetCallsign(cid)
